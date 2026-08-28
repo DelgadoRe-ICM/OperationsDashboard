@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Operations Dashboard</title>
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    background:#111827;
+    color:white;
+    font-family:Arial,Helvetica,sans-serif;
+    padding:20px;
+}
+
+.header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:20px;
+}
+
+.title{
+    font-size:2.5rem;
+    font-weight:bold;
+}
+
+.clock{
+    font-size:2rem;
+    color:#60a5fa;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:2fr 1fr;
+    gap:20px;
+}
+
+.card{
+    background:#1f2937;
+    border-radius:12px;
+    padding:20px;
+    box-shadow:0 4px 6px rgba(0,0,0,.2);
+}
+
+.card h2{
+    margin-bottom:15px;
+    color:#93c5fd;
+}
+
+.schedule-row{
+    display:grid;
+    grid-template-columns:120px 1fr 150px;
+    gap:10px;
+    padding:12px 0;
+    border-bottom:1px solid #374151;
+    font-size:1.1rem;
+}
+
+.priority-item{
+    padding:12px;
+    margin-bottom:10px;
+    border-radius:8px;
+    font-weight:bold;
+}
+
+.critical{
+    background:#991b1b;
+}
+
+.high{
+    background:#b45309;
+}
+
+.normal{
+    background:#166534;
+}
+
+.announcement{
+    padding:10px 0;
+    border-bottom:1px solid #374151;
+}
+
+.deadline-item{
+    background:#374151;
+    padding:12px;
+    margin-bottom:12px;
+    border-radius:8px;
+}
+
+.deadline-item strong{
+    color:#93c5fd;
+}
+
+.footer{
+    margin-top:20px;
+    text-align:center;
+    color:#9ca3af;
+}
+
+.loading{
+    color:#9ca3af;
+}
+
+@media (max-width:1000px){
+
+    .grid{
+        grid-template-columns:1fr;
+    }
+
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="header">
+    <div class="title">OPERATIONS DASHBOARD</div>
+    <div class="clock" id="clock">Loading...</div>
+</div>
+
+<div class="grid">
+
+    <div>
+
+        <div class="card">
+
+            <h2>🚚 Logistics Schedule</h2>
+
+            <div id="scheduleTable" class="loading">
+                Loading Schedule...
+            </div>
+
+        </div>
+
+        <div class="card" style="margin-top:20px;">
+
+            <h2>📅 Upcoming Events</h2>
+
+            <div id="calendarList" class="loading">
+                Loading Calendar...
+            </div>
+
+        </div>
+
+    </div>
+
+    <div>
+
+        <div class="card">
+
+            <h2>🔥 Project Priorities</h2>
+
+            <div id="priorityList" class="loading">
+                Loading Priorities...
+            </div>
+
+        </div>
+
+        <div class="card" style="margin-top:20px;">
+
+            <h2>📢 Announcements</h2>
+
+            <div id="announcementList" class="loading">
+                Loading Announcements...
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<div class="footer">
+    Operations Center Display
+</div>
+
+<script>
+
+/* ==========================================
+   CLOCK
+========================================== */
+
+function updateClock(){
+
+    const now = new Date();
+
+    const options = {
+        weekday:'short',
+        month:'short',
+        day:'numeric',
+        year:'numeric',
+        hour:'numeric',
+        minute:'2-digit'
+    };
+
+    document.getElementById("clock").innerHTML =
+        now.toLocaleString("en-US", options);
+
+}
+
+updateClock();
+setInterval(updateClock,1000);
+
+/* ==========================================
+   LOAD SCHEDULE
+========================================== */
+
+async function loadSchedule(){
+
+    try{
+
+        const response = await fetch("schedule.csv");
+        const csv = await response.text();
+
+        const rows =
+            csv.trim().split("\n").slice(1);
+
+        let html='';
+
+        rows.forEach(row => {
+
+            const [time,task,status] =
+                row.split(",");
+
+            html += `
+            <div class="schedule-row">
+                <div>${time}</div>
+                <div>${task}</div>
+                <div>${status}</div>
+            </div>
+            `;
+        });
+
+        document.getElementById("scheduleTable").innerHTML = html;
+
+    }catch(error){
+
+        document.getElementById("scheduleTable").innerHTML =
+            "Unable to load schedule.";
+
+    }
+
+}
+
+/* ==========================================
+   LOAD PRIORITIES
+========================================== */
+
+async function loadPriorities(){
+
+    try{
+
+        const response = await fetch("priorities.csv");
+        const csv = await response.text();
+
+        const rows =
+            csv.trim().split("\n").slice(1);
+
+        let html='';
+
+        rows.forEach(row => {
+
+            const [priority,project] =
+                row.split(",");
+
+            let cssClass = "normal";
+
+            if(priority === "Critical"){
+                cssClass = "critical";
+            }
+
+            if(priority === "High"){
+                cssClass = "high";
+            }
+
+            html += `
+                <div class="priority-item ${cssClass}">
+                    ${priority} - ${project}
+                </div>
+            `;
+
+        });
+
+        document.getElementById("priorityList").innerHTML = html;
+
+    }catch(error){
+
+        document.getElementById("priorityList").innerHTML =
+            "Unable to load priorities.";
+
+    }
+
+}
+
+/* ==========================================
+   LOAD ANNOUNCEMENTS
+========================================== */
+
+async function loadAnnouncements(){
+
+    try{
+
+        const response =
+            await fetch("announcements.csv");
+
+        const csv =
+            await response.text();
+
+        const rows =
+            csv.trim().split("\n").slice(1);
+
+        let html='';
+
+        rows.forEach(row => {
+
+            html += `
+            <div class="announcement">
+                ${row}
+            </div>
+            `;
+
+        });
+
+        document.getElementById("announcementList").innerHTML =
+            html;
+
+    }catch(error){
+
+        document.getElementById("announcementList").innerHTML =
+            "Unable to load announcements.";
+
+    }
+
+}
+
+/* ==========================================
+   LOAD CALENDAR
+========================================== */
+
+async function loadCalendar(){
+
+    try{
+
+        const response =
+            await fetch("calendar.csv");
+
+        const csv =
+            await response.text();
+
+        const rows =
+            csv.trim().split("\n").slice(1);
+
+        let html='';
+
+        rows.forEach(row => {
+
+            const [date,event] =
+                row.split(",");
+
+            html += `
+            <div class="deadline-item">
+                <strong>${date}</strong><br>
+                ${event}
+            </div>
+            `;
+
+        });
+
+        document.getElementById("calendarList").innerHTML =
+            html;
+
+    }catch(error){
+
+        document.getElementById("calendarList").innerHTML =
+            "Unable to load calendar.";
+
+    }
+
+}
+
+/* ==========================================
+   INITIAL LOAD
+========================================== */
+
+loadSchedule();
+loadPriorities();
+loadAnnouncements();
+loadCalendar();
+
+/* ==========================================
+   AUTO REFRESH EVERY 5 MINUTES
+========================================== */
+
+setTimeout(() => {
+
+    location.reload();
+
+},300000);
+
+</script>
+
+</body>
+</html>
